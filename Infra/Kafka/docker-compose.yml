@@ -1,0 +1,59 @@
+volumes:
+  kafka-data:
+
+services:
+  controller:
+    image: apache/kafka:4.2.0
+    container_name: controller
+
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: controller
+      KAFKA_LISTENERS: CONTROLLER://0.0.0.0:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@controller:9093
+      KAFKA_CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+  broker:
+    image: apache/kafka:4.2.0
+    container_name: broker
+
+    depends_on:
+      - controller
+    
+    ports:
+      - "9092:9092"
+
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+
+    environment:
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: broker
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@controller:9093
+      KAFKA_CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+
+
+  kafka-init:
+    image: apache/kafka:4.2.0
+    container_name: kafka-init
+
+    depends_on:
+      - broker
+
+    volumes:
+      - ./topics:/topics
+
+    command: >
+        bash -c "
+        sleep 30 &&
+        /topics/create-topics.sh
+        "
